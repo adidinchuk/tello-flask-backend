@@ -24,7 +24,7 @@ class Vision():
         draw_x - if true an + will be drawn in the center of the rect
         """
         if (text != None):
-            cv2.putText(frame, 'Target', (target.x, target.y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1.5)
+            cv2.putText(frame, 'Target', (target.x, target.y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
         cv2.rectangle(frame, (target.x, target.y), (target.w+target.x, target.h+target.y), color, 2)
         if draw_x:
             Vision.draw_target_x(target, frame, color)
@@ -43,10 +43,10 @@ class Vision():
         target = rect object containing the dimension of the face(s)        
         """
         faces = Vision.get_faces(frame)
-        target = Rect(0, 0, 0, 0) 
+        target = Rect(0, 0, 0, 0)
 
         if (len(faces) == 0):
-            return None, frame
+            return None
 
         if (max_targets == 1):
             # identify the closest (largest) face in the list
@@ -57,8 +57,9 @@ class Vision():
             for (x, y, w, h) in faces:
                 Vision.draw_identifier(frame, Rect( x, y, w, h), color=FACE_FRAME_COLOR, text='Face', draw_x=False)
                 target = Rect(x, y, w, h) if target == Rect(0, 0, 0, 0) else target.combine(Rect(x, y, w, h))
-
+        
         Vision.draw_identifier(frame, target, color=TARGET_COLOR, text='Target')
+        
         return target
 
     @staticmethod

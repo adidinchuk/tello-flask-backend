@@ -226,7 +226,7 @@ class MotionController():
         to be updated with more automation options
         """
         if self.is_active() :
-            target = Vision.track_faces(frame, max_targets=self.automation_target)     
+            target = Vision.track_faces(frame, max_targets=self.automation_target)
             frame = Vision.draw_identifier(frame, THRESHOLD_POSITION)
             self._update_motion_values(target)
         return frame

@@ -46,7 +46,6 @@ def tello_streamon():
 
 @tello_routes.route('/tello/rc', methods = ['GET', 'POST'])
 def tello_rc():
-    print( request.get_json())
     try:
         drone.process_instructions("rc", request.get_json(), response_required=True)
         return success_response
