@@ -37,12 +37,12 @@ class PIDController():
         """
         # generate timestamps for estimating rates of change
         timestamp = time.time()
-        time_delta = timestamp - self._last_compute_timestamp / 1000
+        time_delta = timestamp - self._last_compute_timestamp
 
         self._magnitudes["p"] = error
 
         # reset the memory time if the time delta is too high (> 0.1 second)
-        if(time_delta > MEMORY_RESET_THRESHOLD):
+        if(time_delta / 1000 > MEMORY_RESET_THRESHOLD):
             self._magnitudes["d"] = 0
         else:
             self._magnitudes["d"] = (error - self._last_error) / time_delta;

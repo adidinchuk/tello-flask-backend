@@ -9,7 +9,7 @@ import copy
 
 LOGGER = logging.getLogger('app')
 
-VIDEO_TRANSFER_FRAME_RATE = 60
+VIDEO_TRANSFER_FRAME_RATE = 30
 DRONE_STATE_TRANSFER_RATE = 1
 state_forwarding_task = None
 video_processing_task = None

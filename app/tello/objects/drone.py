@@ -95,8 +95,15 @@ class TelloDrone(Tello):
     def poller_job(self):
         """ Poll tello for speed & wifi data and cache the values """
         if(self.connected()):
-            self.query_speed()
-            self.query_wifi_signal_noise_ratio()
+            try:
+                self.query_speed()
+            except:
+                pass
+            try:
+                print('wifi????')
+                self.query_wifi_signal_noise_ratio()
+            except:
+                pass
 
 
     def connected(self):
@@ -180,6 +187,8 @@ VIDEO_HEIGHT = 720
 SCREEN_CENTER = Point(VIDEO_WIDTH / 2, VIDEO_HEIGHT / 2)
 THRESHOLD_HEIGHT = 250
 THRESHOLD_WIDTH = 250
+THRESHOLD_SPAN_MAX = 25 # minimum distance of the target from the camera (in % of screen size)
+THRESHOLD_SPAN_MIN = 15 # maximum distance of the target from the camera (in % of screen size)
 
 THRESHOLD_POSITION = Rect(int(SCREEN_CENTER.x - THRESHOLD_WIDTH/2), int(SCREEN_CENTER.y - THRESHOLD_HEIGHT/2), THRESHOLD_WIDTH, THRESHOLD_HEIGHT)
 
@@ -193,7 +202,8 @@ class MotionController():
         self._control_object = target
         self.automation_target = Automation_Options.NILL
         self._pid_z = pid.PIDController(kP=0.25, kI=0, kD=0.1, saturation_limit_max=50, saturation_limit_min=-50)
-        self._pid_r = pid.PIDController(kP=0.3, kI=0, kD=1, saturation_limit_max=50, saturation_limit_min=-50)
+        self._pid_r = pid.PIDController(kP=0.3, kI=0, kD=0.1, saturation_limit_max=50, saturation_limit_min=-50)
+        self._pid_y = pid.PIDController(kP=0.2, kI=0, kD=0.1, saturation_limit_max=20, saturation_limit_min=-20)
         self._set_next_insturction(0,0,0,0)
 
     def _update_motion_values(self, target):
@@ -203,6 +213,10 @@ class MotionController():
         x, y, z, r = 0, 0, 0, 0 # zero out rc command values
         if(self.is_active() and target != None):
             error = target.distance_from_point(SCREEN_CENTER)
+            h_p = (target.h / VIDEO_HEIGHT) * 100
+            w_p = (target.w / VIDEO_WIDTH) * 100
+            if(max(h_p, w_p) < THRESHOLD_SPAN_MIN or max(h_p, w_p) > THRESHOLD_SPAN_MAX):
+                y = self._pid_y.generate_value(error.y)
             if(abs(error.y) > THRESHOLD_HEIGHT / 2):
                 z = self._pid_z.generate_value(error.y)
             if(abs(error.x) > THRESHOLD_WIDTH / 2):
