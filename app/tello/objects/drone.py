@@ -14,7 +14,7 @@ from ...development.DJITelloPy.djitellopy import Tello
 from .vision import Vision
 
 #maximum time the server will wait for a read response from the drone (ms)
-COMMAND_TIMEOUT_THRESHOLD = 1
+COMMAND_TIMEOUT_THRESHOLD = 0.75
 STATUS_JOBS_PERIOD = 3
 CONNECTION_MANAGER_JOB_PERIOD = 15
 CONNECTION_TIMEOUT_THRESHOLD = 5
@@ -100,7 +100,6 @@ class TelloDrone(Tello):
             except:
                 pass
             try:
-                print('wifi????')
                 self.query_wifi_signal_noise_ratio()
             except:
                 pass
@@ -198,12 +197,17 @@ class MotionController():
     Object resposible for the automation of the drone
     """
 
+    TARGET_MEMORY_THRESHOLD = 1
+    _last_target_ts = float("inf")
+    _last_target = None
+
     def __init__(self, target):
         self._control_object = target
         self.automation_target = Automation_Options.NILL
         self._pid_z = pid.PIDController(kP=0.25, kI=0, kD=0.1, saturation_limit_max=50, saturation_limit_min=-50)
         self._pid_r = pid.PIDController(kP=0.3, kI=0, kD=0.1, saturation_limit_max=50, saturation_limit_min=-50)
         self._pid_y = pid.PIDController(kP=0.2, kI=0, kD=0.1, saturation_limit_max=20, saturation_limit_min=-20)
+       
         self._set_next_insturction(0,0,0,0)
 
     def _update_motion_values(self, target):
@@ -211,6 +215,11 @@ class MotionController():
         computes the error values and updates motion insturctions using PID controllers
         """
         x, y, z, r = 0, 0, 0, 0 # zero out rc command values
+        # load the previous target position if no target detected in frame
+        if(self.is_active() and self._last_target != None and target == None):
+            # stop if the memory threshold is exceeded
+            if(time.time() - self._last_target_ts < self.TARGET_MEMORY_THRESHOLD):
+                target = self._last_target
         if(self.is_active() and target != None):
             error = target.distance_from_point(SCREEN_CENTER)
             h_p = (target.h / VIDEO_HEIGHT) * 100
@@ -221,9 +230,9 @@ class MotionController():
                 z = self._pid_z.generate_value(error.y)
             if(abs(error.x) > THRESHOLD_WIDTH / 2):
                 r = self._pid_r.generate_value(-error.x)
+            
         self._control_object.process_instructions('rc', {"a" : x, "b" : y, "c" : z, "d": r }, response_required=False)
         self._set_next_insturction(x, y, z, r)
-        return True
 
     def _set_next_insturction(self, x, y, z, r):
         self._next_automation_instruction = RC_Command(x, y, z, r)
@@ -240,7 +249,11 @@ class MotionController():
         to be updated with more automation options
         """
         if self.is_active() :
-            target = Vision.track_faces(frame, max_targets=self.automation_target)
-            frame = Vision.draw_identifier(frame, THRESHOLD_POSITION)
+            Vision.draw_identifier(frame, THRESHOLD_POSITION)
+            target = Vision.track_faces(frame, max_targets=self.automation_target)            
             self._update_motion_values(target)
+            if(target != None):
+                # save the target position for the next pass
+                self._last_target = target
+                self._last_target_ts = time.time()
         return frame

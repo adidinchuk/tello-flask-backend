@@ -28,7 +28,6 @@ class Vision():
         cv2.rectangle(frame, (target.x, target.y), (target.w+target.x, target.h+target.y), color, 2)
         if draw_x:
             Vision.draw_target_x(target, frame, color)
-        return frame
 
     @staticmethod
     def track_faces(frame, max_targets=1):
