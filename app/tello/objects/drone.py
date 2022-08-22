@@ -12,6 +12,7 @@ import av
 from apscheduler.schedulers.background import BackgroundScheduler
 from ...development.DJITelloPy.djitellopy import Tello
 from .vision import Vision
+import hashlib
 
 #maximum time the server will wait for a read response from the drone (ms)
 COMMAND_TIMEOUT_THRESHOLD = 0.75
@@ -200,6 +201,8 @@ class MotionController():
     TARGET_MEMORY_THRESHOLD = 1
     _last_target_ts = float("inf")
     _last_target = None
+    _last_frame = None
+    _this_frame = None
 
     def __init__(self, target):
         self._control_object = target
@@ -231,11 +234,24 @@ class MotionController():
             if(abs(error.x) > THRESHOLD_WIDTH / 2):
                 r = self._pid_r.generate_value(-error.x)
             
-        self._control_object.process_instructions('rc', {"a" : x, "b" : y, "c" : z, "d": r }, response_required=False)
+        #self._control_object.process_instructions('rc', {"a" : x, "b" : y, "c" : z, "d": r }, response_required=False)
         self._set_next_insturction(x, y, z, r)
+        self._send_queued_instruction()
 
     def _set_next_insturction(self, x, y, z, r):
         self._next_automation_instruction = RC_Command(x, y, z, r)
+    
+    def _send_queued_instruction(self):
+        if (hashlib.md5(self._this_frame).hexdigest() != hashlib.md5(self._last_frame).hexdigest() ):
+            self._control_object.process_instructions('rc', {
+            "a" : self._next_automation_instruction.x, 
+            "b" : self._next_automation_instruction.y, 
+            "c" : self._next_automation_instruction.z, 
+            "d": self._next_automation_instruction.r 
+            }, response_required=False)
+        else:
+            self._control_object.LOGGER.info("Skipping RC instruction as the md5 value is unchanged")
+            self._control_object.process_instructions('rc', { "a" : 0, "b" : 0, "c" : 0, "d": 0 }, response_required=False)
 
     def get_next_instruction(self):
         return self._next_automation_instruction
@@ -248,6 +264,7 @@ class MotionController():
         updates the automation model with the provided video frame
         to be updated with more automation options
         """
+        self._last_frame, self._this_frame = self._this_frame, frame
         if self.is_active() :
             Vision.draw_identifier(frame, THRESHOLD_POSITION)
             target = Vision.track_faces(frame, max_targets=self.automation_target)            

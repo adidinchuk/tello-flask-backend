@@ -80,5 +80,5 @@ class Vision():
         generates an array of detected faces in the frame using the haarcascades classifier
         """
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        faces = CASCADE.detectMultiScale(gray, 1.2, minNeighbors=10, minSize=[20, 20])
+        faces = CASCADE.detectMultiScale(gray, 1.1, minNeighbors=20, minSize=[50, 50])
         return faces
